@@ -1,0 +1,6 @@
+SCPR code to upload files and edit through google cloud.  
+
+index.html - Firebase code that includes user interface
+
+main.py - Google Cloud Console code that edits the files and puts data in BigQuery Database
+requirements.txt - Configuration for main.py
