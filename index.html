@@ -103,7 +103,7 @@
         codedevent=encodeURIComponent(childSnapshot.val().event)
         codedvenue=encodeURIComponent(childSnapshot.val().venue)
         codedeventdate=encodeURIComponent(childSnapshot.val().eventdate)
-        cell1.innerHTML='<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?event=' + codedevent + '&venue=' + codedvenue + '&eventdate=' + codedeventdate +   '">' + childSnapshot.val().event + '</a>';
+        cell1.innerHTML='<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=unknown&event=' + codedevent + '&venue=' + codedvenue + '&eventdate=' + codedeventdate +   '">' + childSnapshot.val().event + '</a>';
         let cell2=document.createElement("td");
         cell2.innerHTML=childSnapshot.val().venue;
         let cell3=document.createElement("td");
