@@ -1,8 +1,14 @@
-<!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<title>Firebase Web Quickstart</title>
+  <head>
+    <title>SCPR Event Attendance Upload</title>
+    <!-- Load the Firebase library before loading the body. -->
+    <script src="https://www.gstatic.com/firebasejs/4.6.2/firebase.js"></script>
+
+    <!-- Load the jQuery library, which we'll use to manipulate HTML elements with Javascript. -->
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+
+    <!-- Load Bootstrap stylesheet, which will is CSS that makes everything prettier and also responsive (aka will work on all devices of all sizes). -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 		<style media="screen">
 		body {
 			display: flex;
@@ -20,67 +26,115 @@
 			width: 50%;
 			margin-bottom: 10px;
 		}
-		</style>
-	</head>
-	<body>
-	
-	<progress value="0" max="100" id="uploader">0%</progress>
-	<input type="file" value="upload" id="fileButton" />
-	
-	
-<script src="https://www.gstatic.com/firebasejs/4.6.2/firebase.js"></script>
-<script>
-  // Initialize Firebase
-  var config = {
-      apiKey: XXXXXX,
-      authDomain: "XXXXXX.firebaseapp.com",
-      databaseURL: "https://XXXXXX.firebaseio.com",
-      projectId: "XXXXXX",
-      storageBucket: "csv-input-bucket",
-  };
-  firebase.initializeApp(config);
-  
-  //get elements
-  var uploader = document.getElementById('uploader');
-  var fileButton = document.getElementById('fileButton');
-  
-  // listen for file selection
-  fileButton.addEventListener('change',function(e) {
-   // get file
-   var file = e.target.files[0];
-   
-   var fileTypes = ['csv'];  //acceptable file types
+		</style> 
+  </head>
 
-   var extension = e.target.files[0].name.split('.').pop().toLowerCase(),  //file extension from input file
-       isSuccess = fileTypes.indexOf(extension) > -1;  //is extension in acceptable types
-   if (isSuccess) {
-       // create a storage reference
-       var storageRef = firebase.storage().ref(file.name);
-   
-       // upload file
-       var task = storageRef.put(file);
-   
-       // update progress bar
-       task.on('state_changed',
-   
-	     function progress(snapshot) {
-	     var percentage = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-	     uploader.value = percentage;
-	    },
-	
-	    function error(err) {
-	 
-	    },
-	
-	    function complete() {
-	
-	    });
-   }
-   else {
-       alert('Unrecongnized type!');
-   }
+  <body>
+    <progress value="0" max="100" id="uploader">0%</progress>
+  	<input type="file" value="upload" id="fileButton" />
+    <!-- Load the application script, which will save data to our Firebase app when we click the button. -->
+      <script>
+      // TODO: Replace with your project's config object. You can find this
+      // by navigating to your project's console overview page
+      // (https://console.firebase.google.com/project/your-project-id/overview)
+      // and clicking "Add Firebase to your web app"
+		  //Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyDNAm6l0jUKgVPXJlseNTnErYfGJK9lCnw",
+        authDomain: "scprbigquery.firebaseapp.com",
+        databaseURL: "https://scprbigquery.firebaseio.com",
+        projectId: "scprbigquery",
+        storageBucket: "csv-input-bucket",
+        };
+      // Initialize your Firebase app
     
-  });
-</script>
-	</body>
+      firebase.initializeApp(config);
+
+      // Upload a file
+      var uploader = document.getElementById('uploader');
+      var fileButton = document.getElementById('fileButton');
+  
+      // listen for file selection
+      fileButton.addEventListener('change',function(e) {
+      // get file
+        var file = e.target.files[0];
+   
+        var fileTypes = ['csv'];  //acceptable file types
+
+        var extension = e.target.files[0].name.split('.').pop().toLowerCase(),  //file extension from input file
+        isSuccess = fileTypes.indexOf(extension) > -1;  //is extension in acceptable types
+        if (isSuccess) {
+          // create a storage reference
+          var storageRef = firebase.storage().ref(file.name);
+          // upload file
+          var task = storageRef.put(file);
+   
+          // update progress bar
+          task.on('state_changed',
+   
+  	      function progress(snapshot) {
+	          var percentage = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+	          uploader.value = percentage;
+	          },
+	
+	        function error(err) {
+	 
+	          },
+	
+	        function complete() {
+	
+	          });
+          }
+        else {
+        alert('Unrecognized type!');
+          }
+    
+        });
+      // Reference to the event/venue/date object in Firebase realtime database
+      var eventlist = firebase.database().ref("1Yv06quH0qO16P_sdTMZ_hxtL1FVRD5svQbEoCkmF0SM/Sheet1");
+
+      // Get all of the values from the Google Sheet
+      eventlist.on('child_added', function(childSnapshot) {
+        // Create a table listing the event/venue/date with hyperlink to "cloud functions"
+
+        let row = document.createElement('tr');
+
+        let cell1=document.createElement("td");
+        codedevent=encodeURIComponent(childSnapshot.val().event)
+        codedvenue=encodeURIComponent(childSnapshot.val().venue)
+        codedeventdate=encodeURIComponent(childSnapshot.val().eventdate)
+        cell1.innerHTML='<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?event=' + codedevent + '&venue=' + codedvenue + '&eventdate=' + codedeventdate +   '">' + childSnapshot.val().event + '</a>';
+        let cell2=document.createElement("td");
+        cell2.innerHTML=childSnapshot.val().venue;
+        let cell3=document.createElement("td");
+        cell3.innerHTML=childSnapshot.val().eventdate;
+
+        row.append(cell1); // add Event link
+        row.append(cell2); // add venue
+        row.append(cell3); // add Eventtime
+
+        $("#table_body").append(row)
+
+        });
+   
+      </script>
+
+    <div class="container">
+      <h3>Select an Event Link to Upload into Database</h3> 
+      Event List Edit at:  <a href="https://docs.google.com/spreadsheets/d/1Yv06quH0qO16P_sdTMZ_hxtL1FVRD5svQbEoCkmF0SM/edit#gid=0">https://docs.google.com/spreadsheets/d/1Yv06quH0qO16P_sdTMZ_hxtL1FVRD5svQbEoCkmF0SM/edit#gid=0</a>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Venue</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        
+        <tbody id="table_body"> 
+        
+        </tbody>
+      </table>
+    </div>
+  </body>
 </html>
