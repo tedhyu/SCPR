@@ -1,0 +1,5 @@
+# Function dependencies, for example:
+# package>=version
+Flask==1.1.1
+google-cloud-storage==1.23.0
+gunicorn==20.0.4

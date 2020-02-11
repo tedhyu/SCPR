@@ -1,0 +1,90 @@
+import re
+import csv
+import flask
+import array as arr
+from google.cloud import bigquery
+from google.cloud import storage
+from datetime import datetime
+
+def sql(request):
+    """Responds to any HTTP request.
+    Args:
+        request (flask.Request): HTTP request object.
+    Returns:
+        The response text or any set of values that can be turned into a
+        Response object using
+        `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
+    """
+    
+    request_args = request.args
+    if request_args and "event" in request_args:
+        eventname = request_args["event"]
+        
+    if request_args and "venue" in request_args:
+        venue = request_args["venue"]
+        
+    if request_args and "eventdate" in request_args:
+        eventdate = request_args["eventdate"]
+      
+
+    file='output.csv'
+    input_bucket='csv-output-bucket'
+    client = storage.Client()
+    bucket = client.get_bucket(input_bucket)
+    blob = bucket.blob(file)
+    with open("/tmp/temp.csv", "wb") as file_obj:
+        blob.download_to_file(file_obj) 
+
+    right_header=1 # right_header changes when file is not right format 
+    list1=[]
+    email=''
+    guestcount=0
+    SQL='INSERT INTO customertable.customer (email, first_name, last_name, event) VALUES '
+    SQL2= 'INSERT INTO customertable.Event (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
+    SQL3= 'select Email_Address from customertable.salesforce where '
+    with open("/tmp/temp.csv") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        line_count = 0
+        for row in csv_reader:
+            column=len(row)
+            if line_count == 0:   #process column names
+                print(row[1])
+                if(re.search('Header does not have',row[1])):             #search error message
+                    right_header="Error: " + row[1] #not right format
+                    break 
+                line_count += 1
+            else:
+                if(email!=row[0]):   #take care of duplicates
+                    if (line_count > 1): #add commas and ors if not first row
+                        SQL=SQL+" , "
+                        SQL3=SQL3+' or '
+                    guestcount=0
+                    SQL = SQL+'("'+row[2]+'", "'+row[0]+'", "'+row[1]+'", "'+eventname+'")'
+                    SQL3=SQL3+'Email_Address= "'+ row[2] + '" ' 
+                    email=row[0]
+                else:
+                    guestcount +=1
+               
+                line_count +=1
+
+    attendance=line_count-1      
+    attendance=str(attendance)
+    print(SQL)  
+    dateTimeObj = str(datetime.now())
+    SQL2=SQL2+'("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'
+    
+    if(right_header==1):
+        bg_client = bigquery.Client()
+        query_job = bg_client.query(SQL)
+        query_job2 = bg_client.query(SQL2)
+        query_job3 = bg_client.query(SQL3)
+        for row in query_job3:
+            print(row[0])
+        return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
+
+    else:
+        return right_header  #prints error message
+
+        
+    
+    

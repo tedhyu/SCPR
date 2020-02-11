@@ -33,22 +33,8 @@
     <progress value="0" max="100" id="uploader">0%</progress>
   	<input type="file" value="upload" id="fileButton" />
     <!-- Load the application script, which will save data to our Firebase app when we click the button. -->
+      <script src="index.js"></script> //index.js contains the configuration variables.
       <script>
-      // TODO: Replace with your project's config object. You can find this
-      // by navigating to your project's console overview page
-      // (https://console.firebase.google.com/project/your-project-id/overview)
-      // and clicking "Add Firebase to your web app"
-		  //Initialize Firebase
-      var config = {
-        apiKey: "AIzaSyDNAm6l0jUKgVPXJlseNTnErYfGJK9lCnw",
-        authDomain: "scprbigquery.firebaseapp.com",
-        databaseURL: "https://scprbigquery.firebaseio.com",
-        projectId: "scprbigquery",
-        storageBucket: "csv-input-bucket",
-        };
-      // Initialize your Firebase app
-    
-      firebase.initializeApp(config);
 
       // Upload a file
       var uploader = document.getElementById('uploader');
