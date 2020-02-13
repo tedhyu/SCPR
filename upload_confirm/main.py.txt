@@ -1,6 +1,7 @@
 import re
 import csv
 import flask
+import os
 import array as arr
 from google.cloud import bigquery
 from google.cloud import storage
@@ -26,15 +27,15 @@ def sql(request):
     if request_args and "eventdate" in request_args:
         eventdate = request_args["eventdate"]
       
-
+    now=datetime.now()
+    tempfile="/tmp/temp.csv"
     file='output.csv'
     input_bucket='csv-output-bucket'
     client = storage.Client()
     bucket = client.get_bucket(input_bucket)
     blob = bucket.blob(file)
-    with open("/tmp/temp.csv", "wb") as file_obj:
+    with open(tempfile, "wb") as file_obj:
         blob.download_to_file(file_obj) 
-
     right_header=1 # right_header changes when file is not right format 
     list1=[]
     email=''
@@ -42,7 +43,7 @@ def sql(request):
     SQL='INSERT INTO customertable.customer (email, first_name, last_name, event) VALUES '
     SQL2= 'INSERT INTO customertable.Event (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
     SQL3= 'select Email_Address from customertable.salesforce where '
-    with open("/tmp/temp.csv") as csv_file:
+    with open(tempfile, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         line_count = 0
         for row in csv_reader:
@@ -66,7 +67,7 @@ def sql(request):
                     guestcount +=1
                
                 line_count +=1
-
+    os.remove(tempfile)
     attendance=line_count-1      
     attendance=str(attendance)
     print(SQL)  
@@ -85,6 +86,4 @@ def sql(request):
     else:
         return right_header  #prints error message
 
-        
-    
     
