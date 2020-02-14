@@ -32,27 +32,34 @@ def sql(request):
 
     proceed=1  #when 1, enter file records
     replace_event=0
-    bg_client = bigquery.Client()
-    right_header=1 # right_header changes when file is not right format 
-       
-    
+    bg_client = bigquery.Client()      
+    dateTimeObj = str(datetime.now())
+
     if (trigger=='unknown'):
-        SQL0 = 'Select Datestamp from customertable.Event where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+        SQL0 = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
         query_job0 = bg_client.query(SQL0)
         datestamp=0
         for row in query_job0:
             datestamp=row.Datestamp
             break
-        if (datestamp==1):
+        if (datestamp!=0):
             proceed=0  #  No previous record with the same venue, eventdate, and event.  Proceed.
-            
+            datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
+            message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
+            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
+            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
+            return message
+
     elif (trigger=='yes'):
-        SQL0 = 'Delete from customertable.Event where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+        SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+        SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
         query_job0 = bg_client.query(SQL0) 
+        query_jobA = bg_client.query(SQLA) 
         
     else:
         proceed=0  # No overwrite
-        
+        message="No new data was entered as requested."
+        return message    
 
     if (proceed==1):
         if os.path.isfile("/tmp/temp.csv"):
@@ -68,9 +75,9 @@ def sql(request):
         list1=[]
         email=''
         guestcount=0
-        SQL='INSERT INTO customertable.customer (email, first_name, last_name, event) VALUES '
-        SQL2= 'INSERT INTO customertable.Event (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
-        SQL3= 'select Email_Address from customertable.salesforce where '
+        SQL='INSERT INTO customertable.attendees (Email, First_name, Last_name, Eventname, Venue, Eventdate, Datestamp, Is_salesforce) VALUES '
+        SQL2= 'INSERT INTO customertable.events (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
+        SQL3= 'SELECT Email_Address FROM customertable.salesforce WHERE '
 
         with open("/tmp/temp.csv") as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
@@ -80,16 +87,16 @@ def sql(request):
                 if line_count == 0:   #process column names
                     print(row[1])
                     if(re.search('Header does not have',row[1])):             #search error message
-                        right_header="Error: " + row[1] #not right format
-                        break 
+                        err="Error: " + row[1] #not right format
+                        return err
                     line_count += 1
                 else:
                     if(email!=row[0]):   #take care of duplicates
                         if (line_count > 1): #add commas and ors if not first row
                             SQL=SQL+" , "
-                            SQL3=SQL3+' or '
+                            SQL3=SQL3+' OR '
                         guestcount=0
-                        SQL = SQL+'("'+row[2]+'", "'+row[0]+'", "'+row[1]+'", "'+eventname+'")'
+                        SQL = SQL+'("'+row[2]+'", "'+row[0]+'", "'+row[1]+'", "'+eventname+'", "'+venue+'", "'+eventdate+'", "'+dateTimeObj+'",FALSE)'
                         SQL3=SQL3+'Email_Address= "'+ row[2] + '" ' 
                         email=row[0]
                     else:
@@ -100,19 +107,12 @@ def sql(request):
         attendance=line_count-1      
         attendance=str(attendance)
         print(SQL)  
-        dateTimeObj = str(datetime.now())
         SQL2=SQL2+'("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'
     
-        if(right_header==1):
-            query_job = bg_client.query(SQL)
-            query_job2 = bg_client.query(SQL2)
-            query_job3 = bg_client.query(SQL3)
-           # for row in query_job3:
-          #      print(row[0])
-            return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
+        query_job = bg_client.query(SQL)
+        query_job2 = bg_client.query(SQL2)
+        query_job3 = bg_client.query(SQL3)
+        for row in query_job3:
+            print(row[0])
+        return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
 
-        else:
-            print(right_header)
-            return right_header  #prints error message
-
-    
