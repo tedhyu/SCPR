@@ -2,7 +2,7 @@
 
 Powering Southern California Public Radio's audience data.
 
-[](#) 
+[https://docs.google.com/presentation/d/1ETRXEolbi1zsujgT4A_xpSHWsWtPfVPXFJIyV4LPVas/edit#slide=id.p](#) 
 
 <hr/>
 
