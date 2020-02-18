@@ -20,15 +20,23 @@ def sql(request):
     request_args = request.args
     if request_args and "event" in request_args:
         eventname = request_args["event"]
+    else:
+        return "Missing Event Name Parameter"
         
     if request_args and "venue" in request_args:
         venue = request_args["venue"]
+    else:
+        return "Missing Venue Parameter"
         
     if request_args and "eventdate" in request_args:
         eventdate = request_args["eventdate"]
+    else:
+        return "Missing Event Date Parameter"
         
     if request_args and "overwrite" in request_args:
         trigger = request_args["overwrite"]
+    else:
+        return "Missing Trigger Parameter"
 
     proceed=1  #when 1, enter file records
     replace_event=0
@@ -51,10 +59,7 @@ def sql(request):
             return message
 
     elif (trigger=='yes'):
-        SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-        SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-        query_job0 = bg_client.query(SQL0) 
-        query_jobA = bg_client.query(SQLA) 
+        replace_event=1  #delete previous data of event selected, so it can be overwritten.
         
     else:
         proceed=0  # No overwrite
@@ -83,9 +88,12 @@ def sql(request):
             csv_reader = csv.reader(csv_file, delimiter=',')
             line_count = 0
             for row in csv_reader:
-                column=len(row)
                 if line_count == 0:   #process column names
-                    print(row[1])
+                    if(replace_event==1):
+                        SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+                        SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+                        query_job0 = bg_client.query(SQL0) 
+                        query_jobA = bg_client.query(SQLA) 
                     if(re.search('Header does not have',row[1])):             #search error message
                         err="Error: " + row[1] #not right format
                         return err
