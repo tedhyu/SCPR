@@ -55,7 +55,9 @@ def sql(request):
             proceed=0  #  No previous record with the same venue, eventdate, and event.  Proceed.
             datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
             message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
-            eventname=urllib.quote(eventname)
+            eventname=urllib.parse.quote_plus(eventname)  # account for special symbols in URL
+            eventname=urllib.parse.quote_plus(eventvenue)
+            eventname=urllib.parse.quote_plus(eventdate)
             message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
             message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
             return message
