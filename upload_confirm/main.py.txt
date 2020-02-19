@@ -2,7 +2,7 @@ import re
 import csv
 import flask
 import os
-import array as arr
+import urllib
 from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime
@@ -26,6 +26,7 @@ def sql(request):
     if request_args and "venue" in request_args:
         venue = request_args["venue"]
     else:
+        print(venue)
         return "Missing Venue Parameter"
         
     if request_args and "eventdate" in request_args:
@@ -54,6 +55,7 @@ def sql(request):
             proceed=0  #  No previous record with the same venue, eventdate, and event.  Proceed.
             datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
             message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
+            eventname=urllib.quote(eventname)
             message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
             message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
             return message
@@ -89,24 +91,42 @@ def sql(request):
             line_count = 0
             for row in csv_reader:
                 if line_count == 0:   #process column names
-                    if(replace_event==1):
+                    if(re.search('Header does not have',row[1])):             #search error message
+                        err="Error: " + row[1] #not right format
+                        return err
+                    if(replace_event==1):  #overwrites if it is a duplicate event and user approves.
                         SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
                         SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
                         query_job0 = bg_client.query(SQL0) 
                         query_jobA = bg_client.query(SQLA) 
-                    if(re.search('Header does not have',row[1])):             #search error message
-                        err="Error: " + row[1] #not right format
-                        return err
                     line_count += 1
                 else:
                     if(email!=row[0]):   #take care of duplicates
                         if (line_count > 1): #add commas and ors if not first row
-                            SQL=SQL+" , "
                             SQL3=SQL3+' OR '
                         guestcount=0
-                        SQL = SQL+'("'+row[2]+'", "'+row[0]+'", "'+row[1]+'", "'+eventname+'", "'+venue+'", "'+eventdate+'", "'+dateTimeObj+'",FALSE)'
                         SQL3=SQL3+'Email_Address= "'+ row[2] + '" ' 
                         email=row[0]
+                    else:
+                        guestcount +=1
+               
+                    line_count +=1
+
+            query_job3 = bg_client.query(SQL3)  # search salesforce database to see if emails are there.
+            email=''            
+            line_count = 0
+            csv_reader2 = csv.reader(csv_file, delimiter=',')
+            for row2 in csv_reader2:
+                print("bla\n")
+                if line_count == 0:   #process column names
+                    line_count += 1
+                else:
+                    if(email!=row2[0]):   #take care of duplicates
+                        if (line_count > 1): #add commas and ors if not first row
+                            SQL=SQL+" , "
+                        guestcount=0
+                        SQL = SQL+'("'+row2[2]+'", "'+row2[0]+'", "'+row2[1]+'", "'+eventname+'", "'+venue+'", "'+eventdate+'", "'+dateTimeObj+'",FALSE)'
+                        email=row2[0]
                     else:
                         guestcount +=1
                
@@ -115,11 +135,11 @@ def sql(request):
         attendance=line_count-1      
         attendance=str(attendance)
         print(SQL)  
-        SQL2=SQL2+'("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'
+        SQL2=SQL2+'("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'  #add records to events update statement.
     
-        query_job = bg_client.query(SQL)
-        query_job2 = bg_client.query(SQL2)
-        query_job3 = bg_client.query(SQL3)
+        query_job = bg_client.query(SQL)  #insert into attendees table
+        query_job2 = bg_client.query(SQL2)  #insert into events table
+
         for row in query_job3:
             print(row[0])
         return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
