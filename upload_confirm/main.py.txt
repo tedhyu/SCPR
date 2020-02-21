@@ -121,7 +121,6 @@ def sql(request):
             email=""
             for row2 in list1:
                 if(email!=row2[2]):   #take care of duplicates
-                    print(email+" "+row2[2]+"\n")
                     if (line_count > 0): #add commas and ors if not first row
                         SQL=SQL+" , "
                     guestcount=0
