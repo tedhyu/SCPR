@@ -24,7 +24,7 @@ This app establishes a connection between venue and salesforce data, which were 
 
 ## Architecture
 Data Pipeline:  
-![Pipeline](https://imgur.com/PIiQevq)
+![Pipeline](https://imgur.com/PIiQevq.png)
 
 ## Dataset
 CSV file that contains minimum three headers:  email, first name, and last name.  
