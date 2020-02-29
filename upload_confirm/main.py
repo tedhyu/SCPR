@@ -1,5 +1,4 @@
 import re
-import re
 import csv
 import flask
 import os
@@ -7,14 +6,6 @@ import urllib
 from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime
-
-"""
-This Code is implemented into Google Cloud function.  It is the landing page where the SQL processes are implemented.  There are four parameters entered through html:
-event, venue, eventdate, and overwrite
-event, venue, and eventdate are the information of the venue being updated
-overwrite can be unknown, yes, or no.  Unknown is the first iteration, and if the event exists, the the user is asked if they want to overwrite the event.  Yes overwrites and no does nothing as requested.
-The database tables are customertable.events, attendees, and salesforce
-"""
 
 def sql(request):
     """Responds to any HTTP request.
@@ -25,7 +16,7 @@ def sql(request):
         Response object using
         `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
     """
-    #read parameters
+    
     request_args = request.args
     if request_args and "event" in request_args:
         eventname = request_args["event"]
@@ -48,7 +39,7 @@ def sql(request):
     else:
         return "Missing Trigger Parameter"
 
-    proceed=1  #when 1, the records will be entered into databases.
+    proceed=1  #when 1, enter file records
     replace_event=0
     bg_client = bigquery.Client()      
     dateTimeObj = str(datetime.now())
@@ -56,20 +47,20 @@ def sql(request):
     if (trigger=='unknown'):
         SQL0 = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
         query_job0 = bg_client.query(SQL0)
-        datestamp=0            #this is the last time the venue was entered if any.
+        datestamp=0
         for row in query_job0:
-            datestamp=row.Datestamp   #take first datestamp of when the data was entered.
+            datestamp=row.Datestamp
             break
         if (datestamp!=0):
-            proceed=0  #  No previous record with the same venue, eventdate, and event.  Ask user if they want to overwrite.
-            datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))                #format date from SQL pull
+            proceed=0  #  No previous record with the same venue, eventdate, and event.  Proceed.
+            datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
             message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
             eventname=urllib.parse.quote_plus(eventname)  # account for special symbols in URL
             venue=urllib.parse.quote_plus(venue)
             eventdate=urllib.parse.quote_plus(eventdate)
-            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
-            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm_test?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
-            return message   #ask if the user wants to overwrite or not the old record.
+            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
+            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
+            return message
 
     elif (trigger=='yes'):
         replace_event=1  #delete previous data of event selected, so it can be overwritten.
@@ -129,6 +120,7 @@ def sql(request):
             email=""
             for row2 in list1:
                 if(email!=row2[2]):   #take care of duplicates
+                    print(email+" "+row2[2]+"\n")
                     if (line_count > 0): #add commas and ors if not first row
                         SQL=SQL+" , "
                     guestcount=0
