@@ -14,9 +14,9 @@ Requirements:  Google Cloud Account
 2)  Google Cloud Function:  Set up csv_convert and upload_confirm
 3)  Google Cloud Storage:  Set up buckets csv-output-bucket and csv-input-bucket
 4)  BigQuery:  Set up Three BigQuery Tables:
-		a)  customertable.salesforce - This is a BigQuery table imported from Salesforce.  It has one column needed which is Email_address.
-		b)  customertable.attendees - Email(String), First_name(string), Last_name(string), Guests(integer), Is_salesforce(boolean), Datestamp(timestamp), Eventname(string), Venue(String), Eventdate(string)
-                c)  customertable.events - Eventname(string), Venue(string), Eventdate(string), Datestamp(timestamp), Attendance(integer)
+<br>a)  customertable.salesforce - This is a BigQuery table imported from Salesforce.  It has one column needed which is Email_address.
+<br>b)  customertable.attendees - Email(String), First_name(string), Last_name(string), Guests(integer), Is_salesforce(boolean), Datestamp(timestamp), Eventname(string), Venue(String), Eventdate(string)
+<br>c)  customertable.events - Eventname(string), Venue(string), Eventdate(string), Datestamp(timestamp), Attendance(integer)
 <hr/>
 
 ## Introduction
