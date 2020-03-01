@@ -11,7 +11,7 @@ def main(request):
     Trigger=unknown:  Checks to see if events exists.  If it doesn't, proceed with insert.  If not, prompt user if they wish to overwrite.
     Trigger=yes:  Overwrites old data related to the event before inserting.
     Trigger=no:  Does not insert.
-    Args:
+    Args: 
         request (flask.Request): HTTP request object.
     Returns:
         The response text or any set of values that can be turned into a
