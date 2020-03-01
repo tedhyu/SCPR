@@ -21,7 +21,7 @@ Requirements:  Google Cloud Account
 
 ## Introduction
 This app establishes a connection between venue and salesforce data, which were previously not linked.  It enters into two new tables:  attendees and events.
-![Menu](https://imgur.com/a/jjHN3xY.png)
+![Menu](https://imgur.com/jjHN3xY.png)
 
 ## Architecture
 Data Pipeline:  
