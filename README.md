@@ -30,10 +30,9 @@ Data Pipeline:
 ## Dataset
 CSV file that contains minimum three headers:  email, first name, and last name.  
 Two salesforce table in BigQuery:
-    Attendees:  Email, First_name, Last_name, Guests, Is_salesforce, Datestamp, Eventname, Venue, Eventdate
-    Events:  Eventname, Venue, Eventdate, Datestamp, Attendance
+<br>Attendees:  Email, First_name, Last_name, Guests, Is_salesforce, Datestamp, Eventname, Venue, Eventdate
+<br>Events:  Eventname, Venue, Eventdate, Datestamp, Attendance
 
 ## Engineering challenges
-Multiple schemas of CSV files.  Organizing BigQuery tables in a format that is easily readable and logical.  Error handling algorithem.  
-Error Handling Logic:
+Multiple schemas of CSV files.  Organizing BigQuery tables in a format that is easily readable and logical.  Error handling algorithm:  
 ![Error](https://imgur.com/fWY7Drk.png)
