@@ -6,7 +6,7 @@ from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime
 
-def main(request):
+def main(request): 
     """Responds to any HTTP request.  Checks to see if all arguments are present.  Makes decisions based on trigger argument.
     Trigger=unknown:  Checks to see if events exists.  If it doesn't, proceed with insert.  If not, prompt user if they wish to overwrite.
     Trigger=yes:  Overwrites old data related to the event before inserting.
