@@ -6,8 +6,8 @@ import array as arr
 import os
 import requests
 
-def convert(event, context):
-    """Triggered by a change to a Cloud Storage bucket.
+def main(event, context):
+    """Triggered by a new file in csv-input-bucket.  Copies the bucket file to /tmp/temp.csv
     Args:
          event (dict): Event payload.
          context (google.cloud.functions.Context): Metadata for the event.
@@ -25,7 +25,18 @@ def convert(event, context):
     with open("/tmp/temp.csv", "wb") as file_obj:
         blob.download_to_file(file_obj) 
     blob.delete()  #deleted the blob
-    
+    list1,Error_message=read()
+    write(list1,Error_message)
+
+def read():
+    """Opens /tmp/temp.csv.  Checks for errors.  Prioritizes Buyer info but takes other info anyways if Buyer does not exist.
+       Creates a list of Email, First Name, Last Name.  Creates a string of errors if file has inccorect headers.
+    Args:
+        None
+    Returns:
+        list1:  List[string]
+        Error_message:  string
+    """
     list1=[]    #list1 created from csv
     fn_found=0
     ln_found=0
@@ -62,17 +73,24 @@ def convert(event, context):
                     Error_message = Error_message + "Header does not have last name.  "
                 if (Error_message != ""):
                     break
-                line_count += 1
+                line_count = 1
             else:
                 if(re.search('@', row[email_num])):
                     em=re.sub(r"\s+$", "", row[email_num])  #remove extra lines at end
                     fn=re.sub(r"\s+$", "", row[first_name])
                     ln=re.sub(r"\s+$", "", row[last_name])
-                    list1.append((em,fn,ln))
-                line_count += 1
-    
+                    list1.append((em,fn,ln))    
     list1.sort()
+    return list1,Error_message
 
+def write(list1,Error_message):
+    """Takes a list of Email, First Name, Last Name or a string of errors.  Writes the info into a storage bucket:  csv-output-bucket.
+    Args:
+        list1:  List[string]
+        Error_message:  string
+    Returns:
+        None
+    """
 #write after accounting for all errors                
     with open('/tmp/temp2.csv', 'w', newline='') as csvfile:
         output = csv.writer(csvfile, delimiter=',')
@@ -82,10 +100,13 @@ def convert(event, context):
                 output.writerow((row2[1],row2[2],row2[0]))
         else:
             output.writerow(('Error', Error_message))
-            
+
+    client = storage.Client()            
     bucket2 = client.get_bucket('csv-output-bucket')
     blob2 = bucket2.blob("output.csv")
     blob2.upload_from_filename("/tmp/temp2.csv")
+    blob2.cache_control = "private, max-age=0"
+    blob2.patch()
     
 
 

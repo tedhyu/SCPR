@@ -1,14 +1,16 @@
 import re
 import csv
 import flask
-import os
 import urllib
 from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime
 
 def main(request):
-    """Responds to any HTTP request.
+    """Responds to any HTTP request.  Checks to see if all arguments are present.  Makes decisions based on trigger argument.
+    Trigger=unknown:  Checks to see if events exists.  If it doesn't, proceed with insert.  If not, prompt user if they wish to overwrite.
+    Trigger=yes:  Overwrites old data related to the event before inserting.
+    Trigger=no:  Does not insert.
     Args:
         request (flask.Request): HTTP request object.
     Returns:
@@ -36,55 +38,91 @@ def main(request):
 
     bg_client = bigquery.Client()      
 
-    if (trigger=='unknown'):
-        SQL0 = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-        query_job0 = bg_client.query(SQL0)
-        datestamp=0
-        for row in query_job0:
-            datestamp=row.Datestamp
-            break
-        if (datestamp!=0):
-             #  No previous record with the same venue, eventdate, and event.  Proceed.
-            datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
-            message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
-            eventname=urllib.parse.quote_plus(eventname)  # account for special symbols in URL
-            venue=urllib.parse.quote_plus(venue)
-            eventdate=urllib.parse.quote_plus(eventdate)
-            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
-            message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
-            return message
-        is_salesforce,attendees=check_data(eventname,venue,eventdate,bg_client)
-        return insert(eventname,venue,eventdate,bg_client,is_salesforce,attendees)       
+    is_salesforce,attendees,message=check_data(eventname,venue,eventdate,bg_client)  #read csv info and save to list
+    if(re.search('Header does not have',message)):  #check for header error message
+        return message  #return error if headers are incorrect
 
+    if (trigger=='unknown'):
+        message=event_exist(eventname,venue,eventdate,bg_client)  #check if event exists
+        if message=='no event':  #event does not exist.  proceed
+            return insert(eventname,venue,eventdate,bg_client,is_salesforce,attendees)       
+        else:  #event exists.  Prompt user if they want to overwrite.
+            return message
     elif (trigger=='yes'):
-        delete_old(eventname,venue,eventdate,bg_client)
-        is_salesforce,attendees=check_data(eventname,venue,eventdate,bg_client)
-        return insert(eventname,venue,eventdate,bg_client,is_salesforce,attendees)  #delete previous data of event selected, so it can be overwritten.
-        
+        delete_old(eventname,venue,eventdate,bg_client)#delete previous data of event selected, so it can be overwritten.
+        return insert(eventname,venue,eventdate,bg_client,is_salesforce,attendees)  
     else:
         message="No new data was entered as requested."
         return message  
 
+def event_exist(eventname,venue,eventdate,bg_client):
+    """Checks to see if the event already exists and prompts the user if they wish to overwrite old event
+    Args:
+        eventname:  string
+        venue:  string
+        eventdate: string
+        bg_client: BigQuery client
+    Returns:
+        message:  string
+    """ 
+    SQL0 = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+    query_job0 = bg_client.query(SQL0)
+    datestamp=0
+    for row in query_job0:
+        datestamp=row.Datestamp
+        break
+    if (datestamp!=0):
+         #  No previous record with the same venue, eventdate, and event.  Proceed.
+        datetime_new = re.sub('\.\d(.*)$', '', str(datestamp))
+        message="There is previous record of " + eventname + " on " + eventdate + " at " + venue + " recorded at " + datetime_new + ".  Overwrite?"            
+        eventname=urllib.parse.quote_plus(eventname)  # account for special symbols in URL
+        venue=urllib.parse.quote_plus(venue)
+        eventdate=urllib.parse.quote_plus(eventdate)
+        message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=yes&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">Yes</a>'
+        message=message+'&nbsp<a href="https://us-central1-scprbigquery.cloudfunctions.net/upload_confirm?overwrite=no&event=' + eventname + '&venue=' + venue + '&eventdate=' + eventdate + '">No</a>'
+        return message
+    else:
+        return 'no event'
+
 def delete_old(eventname,venue,eventdate,bg_client):  
+    """Deletes old event data from events and attendees table
+    Args:
+        eventname:  string
+        venue:  string
+        eventdate: string
+        bg_client: BigQuery client
+    Returns:
+        NONE
+    """ 
     SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
     SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
     query_job0 = bg_client.query(SQL0) 
     query_jobA = bg_client.query(SQLA) 
     
-
 def check_data(eventname,venue,eventdate,bg_client):    
-    if os.path.isfile("/tmp/temp.csv"):
-        os.remove("/tmp/temp.csv")
-    file='output.csv'
+    """Reads the CSV files and checks for header errors.  Crosschecks the emails in the CSV with the Salesforce Database. 
+       Returns a list of emails, first name, last name.  Returns a list of emails that are in the Salesforce database.
+       If headers are not right, returns error message.
+    Args:
+        eventname:  string
+        venue:  string
+        eventdate: string
+        bg_client: BigQuery client
+    Returns:
+        in_salesforce:  list[string]
+        list1:  list[string]
+    """ 
+    filename='output.csv'
     input_bucket='csv-output-bucket'
     client = storage.Client()
     bucket = client.get_bucket(input_bucket)
-    blob = bucket.blob(file)
+    blob = bucket.blob(filename)
     with open("/tmp/temp.csv", "wb") as file_obj:
         blob.download_to_file(file_obj) 
     list1=[]
     email=''
     SQL3= 'SELECT Email_Address FROM customertable.salesforce WHERE '
+    err=''
         
     with open("/tmp/temp.csv") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -93,23 +131,35 @@ def check_data(eventname,venue,eventdate,bg_client):
             if line_count == 0:   #process column names
                 if(re.search('Header does not have',row[1])):             #search error message
                     err="Error: " + row[1] #not right format
-                    return err
-                line_count = 1
+                line_count += 1
             else:
                 if(email!=row[0]):   #take care of duplicates
-                    if (line_count > 1): #add commas and ors if not first row
+                    if (line_count > 1): #add commas and ors if not second row
                         SQL3=SQL3+' OR '
                     SQL3=SQL3+'Email_Address= "'+ row[2] + '" ' 
                     email=row[0]
+                    line_count+=1
                 list1.append((row[0],row[1],row[2]))              
 
         query_job3 = bg_client.query(SQL3)  # search salesforce database to see if emails are there.
         in_salesforce=[]
         for row in query_job3:
             in_salesforce.append(row[0])
-        return in_salesforce, list1
+        return in_salesforce, list1, err
 
 def insert(eventname,venue,eventdate,bg_client,in_salesforce,attendees):
+    """Inserts data into attendees and events tables.  Calculates Attendance, Guests, Is_salesforce.
+    Args:
+        eventname:  string
+        venue:  string
+        eventdate: string
+        bg_client: BigQuery client
+        in_salesforce:  list[string]
+        attendees:  list[string]
+    Returns:
+        String
+
+    """ 
     dateTimeObj = str(datetime.now())
     SQL='INSERT INTO customertable.attendees (Email, First_name, Last_name, Eventname, Venue, Eventdate, Datestamp, Is_salesforce, Guests) VALUES '
     SQL2= 'INSERT INTO customertable.events (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
@@ -138,5 +188,6 @@ def insert(eventname,venue,eventdate,bg_client,in_salesforce,attendees):
     query_job = bg_client.query(SQL)  #insert into attendees table
     query_job2 = bg_client.query(SQL2)  #insert into events table
     return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
+
 
 
