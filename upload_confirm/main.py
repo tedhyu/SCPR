@@ -111,6 +111,7 @@ def check_data(eventname,venue,eventdate,bg_client):
     Returns:
         in_salesforce:  list[string]
         list1:  list[string]
+        
     """ 
     filename='output.csv'
     input_bucket='csv-output-bucket'
@@ -131,6 +132,7 @@ def check_data(eventname,venue,eventdate,bg_client):
             if line_count == 0:   #process column names
                 if(re.search('Header does not have',row[1])):             #search error message
                     err="Error: " + row[1] #not right format
+                    return 0,0,err
                 line_count += 1
             else:
                 if(email!=row[0]):   #take care of duplicates
