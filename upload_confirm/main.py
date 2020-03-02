@@ -65,8 +65,8 @@ def event_exist(eventname,venue,eventdate,bg_client):
     Returns:
         message:  string
     """ 
-    SQL0 = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-    query_job0 = bg_client.query(SQL0)
+    pull_past_events = 'SELECT Datestamp from customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+    query_job0 = bg_client.query(pull_past_events)
     datestamp=0
     for row in query_job0:
         datestamp=row.Datestamp
@@ -94,10 +94,10 @@ def delete_old(eventname,venue,eventdate,bg_client):
     Returns:
         NONE
     """ 
-    SQL0 = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-    SQLA = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
-    query_job0 = bg_client.query(SQL0) 
-    query_jobA = bg_client.query(SQLA) 
+    delete_past_events = 'DELETE FROM customertable.events where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+    delete_past_attendees = 'DELETE FROM customertable.attendees where Eventname="'+eventname+'" and Venue="' + venue + '" and Eventdate="'+eventdate+'"' 
+    query_job0 = bg_client.query(delete_past_events) 
+    query_jobA = bg_client.query(delete_past_attendees) 
     
 def check_data(eventname,venue,eventdate,bg_client):    
     """Reads the CSV files and checks for header errors.  Crosschecks the emails in the CSV with the Salesforce Database. 
@@ -121,7 +121,7 @@ def check_data(eventname,venue,eventdate,bg_client):
         blob.download_to_file(file_obj) 
     list1=[]
     email=''
-    SQL3= 'SELECT Email_Address FROM customertable.salesforce WHERE '
+    check_in_salesforce= 'SELECT Email_Address FROM customertable.salesforce WHERE '
     err=''
         
     with open("/tmp/temp.csv") as csv_file:
@@ -135,13 +135,13 @@ def check_data(eventname,venue,eventdate,bg_client):
             else:
                 if(email!=row[0]):   #take care of duplicates
                     if (line_count > 1): #add commas and ors if not second row
-                        SQL3=SQL3+' OR '
-                    SQL3=SQL3+'Email_Address= "'+ row[2] + '" ' 
+                        check_in_salesforce=check_in_salesforce+' OR '
+                    check_in_salesforce=check_in_salesforce+'Email_Address= "'+ row[2] + '" ' 
                     email=row[0]
                     line_count+=1
                 list1.append((row[0],row[1],row[2]))              
 
-        query_job3 = bg_client.query(SQL3)  # search salesforce database to see if emails are there.
+        query_job3 = bg_client.query(check_in_salesforce)  # search salesforce database to see if emails are there.
         in_salesforce=[]
         for row in query_job3:
             in_salesforce.append(row[0])
@@ -161,32 +161,32 @@ def insert(eventname,venue,eventdate,bg_client,in_salesforce,attendees):
 
     """ 
     dateTimeObj = str(datetime.now())
-    SQL='INSERT INTO customertable.attendees (Email, First_name, Last_name, Eventname, Venue, Eventdate, Datestamp, Is_salesforce, Guests) VALUES '
-    SQL2= 'INSERT INTO customertable.events (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
+    insert_attendees='INSERT INTO customertable.attendees (Email, First_name, Last_name, Eventname, Venue, Eventdate, Datestamp, Is_salesforce, Guests) VALUES '
+    insert_event= 'INSERT INTO customertable.events (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES '
     line_count = 0
     email=""
     for row2 in attendees:
         if(email!=row2[2]):   #take care of duplicates
             if (line_count > 0): #add commas and ors if not first row
-                SQL=SQL+" , "
+                insert_attendees=insert_attendees+" , "
             guestcount=0
             guests=str(guestcount)
             sf = 'FALSE'  #boolean to show if email is in Salesforce database table
             if row2[2] in in_salesforce:
                 sf='TRUE'
-            SQL = SQL+'("'+row2[2]+'", "'+row2[0]+'", "'+row2[1]+'", "'+eventname+'", "'+venue+'", "'+eventdate+'", "'+dateTimeObj+'",'+sf+','+guests+')'
+            insert_attendees = insert_attendees+'("'+row2[2]+'", "'+row2[0]+'", "'+row2[1]+'", "'+eventname+'", "'+venue+'", "'+eventdate+'", "'+dateTimeObj+'",'+sf+','+guests+')'
             email=row2[2]
             line_count += 1
         else:
             previous_count=str(guestcount)
             guestcount +=1    
             present_count=str(guestcount)
-            SQL= re.sub(previous_count+'\)$', present_count+')', SQL) 
+            insert_attendees= re.sub(previous_count+'\)$', present_count+')', insert_attendees) 
             line_count +=1     
     attendance=str(line_count)
-    SQL2=SQL2+'("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'  #add records to events update statement.    
-    query_job = bg_client.query(SQL)  #insert into attendees table
-    query_job2 = bg_client.query(SQL2)  #insert into events table
+    insert_event= 'INSERT INTO customertable.events (Eventname, Venue, Eventdate, Datestamp, Attendance) VALUES ("'+eventname+'","'+venue+'","'+eventdate+'","'+dateTimeObj+'",'+attendance+')'  #add records to events update statement.    
+    query_job = bg_client.query(insert_attendees)  #insert into attendees table
+    query_job2 = bg_client.query(insert_event)  #insert into events table
     return '<a href="https://storage.cloud.google.com/csv-output-bucket/output.csv">Download</a>'
 
 
