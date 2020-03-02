@@ -11,7 +11,7 @@ https://docs.google.com/presentation/d/1ETRXEolbi1zsujgT4A_xpSHWsWtPfVPXFJIyV4LP
 Requirements:  Google Cloud Account
 
 1)  Firebase:  Set up index.html on Firebase using an editor (e.g. Visual Basic Code) and "firebase deploy"
-2)  Create a google sheet that links to firebase real time database.  Include columns:  id, event, venue, eventdate in the top row.
+2)  Create a google spreadsheet that links to firebase real time database.  Include columns:  id, event, venue, eventdate in the top row.
 3)  Google Cloud Function:  Set up csv_convert and upload_confirm
 4)  Google Cloud Storage:  Set up buckets csv-output-bucket and csv-input-bucket
 5)  Input CSV File:  The event file must contain the headers:  "Email", "Last Name", "First Name".  If there are multiple columns containing these words, priority will be given to the headers "Buyer Email", "Buyer Last Name", and "Buyer First Name".
