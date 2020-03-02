@@ -10,11 +10,12 @@ https://docs.google.com/presentation/d/1ETRXEolbi1zsujgT4A_xpSHWsWtPfVPXFJIyV4LP
 
 Requirements:  Google Cloud Account
 
-1)  Firebase:  Set up index.html on Firebase
-2)  Google Cloud Function:  Set up csv_convert and upload_confirm
-3)  Google Cloud Storage:  Set up buckets csv-output-bucket and csv-input-bucket
-4)  Input CSV File:  The event file must contain the headers:  "Email", "Last Name", "First Name".  If there are multiple columns containing these words, priority will be given to the headers "Buyer Email", "Buyer Last Name", and "Buyer First Name".
-5)  BigQuery:  Set up Three BigQuery Tables:
+1)  Firebase:  Set up index.html on Firebase using an editor (e.g. Visual Basic Code) and "firebase deploy"
+2)  Create a google sheet that links to firebase real time database.  Include columns:  id, event, venue, eventdate in the top row.
+3)  Google Cloud Function:  Set up csv_convert and upload_confirm
+4)  Google Cloud Storage:  Set up buckets csv-output-bucket and csv-input-bucket
+5)  Input CSV File:  The event file must contain the headers:  "Email", "Last Name", "First Name".  If there are multiple columns containing these words, priority will be given to the headers "Buyer Email", "Buyer Last Name", and "Buyer First Name".
+6)  BigQuery:  Set up Three BigQuery Tables:
 <br>a)  customertable.salesforce - This is a BigQuery table imported from Salesforce.  It has one column needed which is Email_address.
 <br>b)  customertable.attendees - Email(String), First_name(string), Last_name(string), Guests(integer), Is_salesforce(boolean), Datestamp(timestamp), Eventname(string), Venue(String), Eventdate(string)
 <br>c)  customertable.events - Eventname(string), Venue(string), Eventdate(string), Datestamp(timestamp), Attendance(integer)
