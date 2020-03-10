@@ -111,6 +111,7 @@ def check_data(eventname,venue,eventdate,bg_client):
     Returns:
         in_salesforce:  list[string]
         list1:  list[string]
+        err:  string
         
     """ 
     filename='output.csv'
