@@ -3,6 +3,7 @@
 Powering Public Radio's audience data.
 
 https://docs.google.com/presentation/d/1ETRXEolbi1zsujgT4A_xpSHWsWtPfVPXFJIyV4LPVas/edit#slide=id.p
+Video:  https://www.youtube.com/watch?v=HJ6JcFWGJCs
 
 <hr/>
 
